@@ -4,6 +4,11 @@
  * Algorithm 2 on a schedule, exposes /snapshot for introspection, and
  * exercises the full affect + memory + plasticity loop.
  *
+ * The agent may reply with one message, or several back-to-back with typing
+ * pauses — this is intrinsic to the SDK, not something the demo configures.
+ * Watch for the dim `...` typing indicator; each chunk arrives after a
+ * length-proportional pause.
+ *
  * Usage:
  *   cp .env.example .env    (add your OPENROUTER_API_KEY)
  *   pnpm install
@@ -21,7 +26,7 @@ import 'dotenv/config';
 import type { PersonId } from '@humanoid/types';
 import { Agent } from '@humanoid/humanoid';
 import { InMemoryStore } from '@humanoid/ground-store';
-import { InMemoryIdentityResolver } from '@humanoid/adapter-core';
+import { InMemoryIdentityResolver, dispatchMessages } from '@humanoid/adapter-core';
 import { CliAdapter } from '@humanoid/adapter-cli';
 
 import { character } from './character.js';
@@ -135,8 +140,8 @@ async function main(): Promise<void> {
 
     // Normal chat: run one turn through the agent, print the reply.
     try {
-      const { reply } = await agent.turn(personId, text);
-      await cli.send(msg.surfaceHandle, msg.conversationId, reply);
+      const { messages } = await agent.turn(personId, text);
+      await dispatchMessages(cli, msg.surfaceHandle, msg.conversationId, messages);
     } catch (err) {
       console.error('[turn error]', err);
     }

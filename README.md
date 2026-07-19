@@ -54,6 +54,7 @@ Because the background loop is auto-firing:
 - **Rumination shows up in `globalAffect`** — negative-affect unresolved memories get periodically re-touched even without a triggering utterance, so a rough exchange colors the agent's mood for the next hour of chat even after you switch topics.
 - **Retrieval quality is affect-conditioned** — the agent recalls episodes that are semantically similar AND mood-congruent. If you're calm, retrieval is broad; if you've made the agent anxious, retrieval collapses onto anxious memories (Bower 1981 mechanism).
 - **The agent's own words become memory** — replies are embedded and stored as `role: 'agent'` episodes, so lore holds up across turns. Ask the agent something in turn 40 that it invented in turn 5; it should remember its own claim.
+- **Aria texts in bursts.** She'll sometimes send one reply, sometimes two or three back-to-back. This is not a demo behavior or an adapter policy — it's the SDK. `Agent.turn` returns a `TurnMessage[]` with typing/delay hints computed inside the agent; the CLI renders each chunk after a dim `...` indicator and a short pause. The same cadence appears on every surface adapter (Discord, iMessage, WhatsApp) because the timing is intrinsic to the SDK's delivery contract, not to individual adapters.
 
 ## Configuration
 
