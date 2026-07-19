@@ -5,6 +5,10 @@ packages:
   - "../humanoid-sdk/packages/cognition/*"
   - "../humanoid-sdk/packages/adapters/*"
   - "../humanoid-sdk/packages/humanoid"
+allowBuilds:
+  esbuild: true
+  protobufjs: true
+  sharp: true
 onlyBuiltDependencies:
   - esbuild
   - protobufjs
