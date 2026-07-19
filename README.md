@@ -64,6 +64,10 @@ Edit `.env`:
 - `OPENROUTER_MODEL` — any model OpenRouter serves (`anthropic/claude-3.5-sonnet`, `openai/gpt-4o`, `meta-llama/llama-3.1-70b-instruct`, etc.).
 - `TICK_INTERVAL_MS` — how often the background loop fires. Default 60000 (1 min).
 
+## Why Aria doesn't drift into AI-assistant mode
+
+Aria's persona brief is short — a few lines of temperament and voice. It never says "don't call yourself an AI," "don't offer to help," "don't do therapist framings." It doesn't need to. The SDK enforces those identity safeguards behind the scenes: a `# Rules` block is prepended to every generation prompt with no configuration path to disable it. That's why a thin persona brief still holds up across hundreds of turns without regressing into assistant register — the demo gets to describe who Aria *is*, and the SDK guarantees what she *isn't*.
+
 ## Persistence (limitations)
 
 `InMemoryStore` is exactly what its name says — the relationship dies when the process exits. This is fine for testing long-conversation dynamics within one session (which is the primary use case for this demo) but not for a persistent companion.
