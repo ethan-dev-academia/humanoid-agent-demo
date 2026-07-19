@@ -1,0 +1,12 @@
+packages:
+  - "."
+  - "../humanoid-sdk/packages/ground/*"
+  - "../humanoid-sdk/packages/live-path/*"
+  - "../humanoid-sdk/packages/cognition/*"
+  - "../humanoid-sdk/packages/adapters/*"
+  - "../humanoid-sdk/packages/humanoid"
+onlyBuiltDependencies:
+  - esbuild
+  - protobufjs
+  - sharp
+  - onnxruntime-node
