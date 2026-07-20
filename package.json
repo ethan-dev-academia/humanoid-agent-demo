@@ -8,6 +8,7 @@
     "chat": "tsx src/index.ts",
     "sim": "tsx src/simulate.ts",
     "validate:numerical": "tsx scripts/validate-numerical-stability.ts",
+    "validate:repetition": "tsx scripts/validate-repetition-guard.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
