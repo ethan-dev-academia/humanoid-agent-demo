@@ -35,6 +35,7 @@ First run downloads ~30MB of local embedding model weights (Xenova/all-MiniLM-L6
 - **Store**: `InMemoryStore` — the relationship survives across many turns *within one process* but not across restarts. See the persistence note below.
 - **Adapter**: `CliAdapter` — one persona, one terminal, one PersonId.
 - **Background loop**: fires every 60s (configurable via `TICK_INTERVAL_MS`) so consolidation, plasticity, rumination, and outreach actually run during a long chat instead of only-when-you-remember-to-call-it.
+- **Diagnostic dashboard**: local HTTP + WebSocket at http://localhost:7373. Open in a browser for live introspection (see below).
 
 ## Slash commands
 
@@ -44,6 +45,23 @@ Type these mid-chat instead of a normal message:
 - `/tick` — fire Algorithm 2 (consolidation, plasticity, rumination, outreach) right now instead of waiting for the interval.
 - `/help` — list commands.
 - `/quit` — exit cleanly.
+
+## Diagnostic dashboard
+
+When you run `pnpm chat`, a local diagnostic server also boots at **http://localhost:7373**. Open it in a browser — the terminal stays the input surface; the browser is a read-only control room.
+
+Panels:
+
+- **Mood brief** — the categorical phrase the SDK exposes to Generation ("quietly-warm", "on-edge", etc.), plus how stale the last snapshot is.
+- **Baseline temperament (drifted)** — Aria's 7-dimension `driftedBaseline` after plasticity (§12 Eq. 18). Bars split around a midline; positive-valence emotions render green, negative-valence render red, surprise is neutral. Watch it drift over hundreds of turns.
+- **Baseline drift ‖b − b₀‖** — L2 magnitude of how far the drifted baseline has moved from the frozen character baseline. If this creeps up, the persona is becoming someone different.
+- **Valence / arousal / bond** — hand-rolled canvas line charts over the last ~120 snapshots (default snapshot cadence is 1s). Valence and bond axes are signed and cross zero; arousal is a positive magnitude.
+- **Top-k salient memories** — the same list `/snapshot` prints, updated live. Each card shows the categorical affect tag, the gist/excerpt, salience, and age.
+- **Journal event stream** — every module's `emit(...)` call (predictive-core, affect-dynamics, encoding-gate, memory-retrieval, generation, consolidation, plasticity, anticipation, outreach) as it happens, with the payload truncated. Auto-scrolls; scroll up to pause and inspect.
+
+The dashboard uses a `TeeJournalSink` under the hood — every event still lands in the store's own case-file record, and *also* streams over WebSocket to the browser. Nothing is dropped from persistence.
+
+No installation step for the dashboard — it's static HTML served by the demo process, no CDN, works offline.
 
 ## What to watch for in a long conversation
 

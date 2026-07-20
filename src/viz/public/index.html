@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>humanoid ▸ diagnostic</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <span id="app-title">humanoid</span>
+    <span class="sep">▸</span>
+    <span id="character-name">—</span>
+    <span class="sep">@</span>
+    <span id="active-persons">—</span>
+    <span id="status" data-state="disconnected">disconnected</span>
+  </header>
+
+  <main id="grid">
+    <section class="panel" id="panel-mood">
+      <header class="panel-header">MOOD BRIEF</header>
+      <div id="mood-brief" class="mood-pill">—</div>
+      <div id="mood-timestamp" class="timestamp">—</div>
+    </section>
+
+    <section class="panel" id="panel-affect">
+      <header class="panel-header">BASELINE TEMPERAMENT (drifted)</header>
+      <div id="affect-bars">
+        <div class="affect-row" data-emotion="joy"><span class="affect-label">joy</span><div class="affect-bar"><div class="affect-fill affect-fill-pos"></div></div><span class="affect-value">—</span></div>
+        <div class="affect-row" data-emotion="sadness"><span class="affect-label">sadness</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+        <div class="affect-row" data-emotion="anger"><span class="affect-label">anger</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+        <div class="affect-row" data-emotion="fear"><span class="affect-label">fear</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+        <div class="affect-row" data-emotion="surprise"><span class="affect-label">surprise</span><div class="affect-bar"><div class="affect-fill affect-fill-neutral"></div></div><span class="affect-value">—</span></div>
+        <div class="affect-row" data-emotion="disgust"><span class="affect-label">disgust</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+        <div class="affect-row" data-emotion="trust"><span class="affect-label">trust</span><div class="affect-bar"><div class="affect-fill affect-fill-pos"></div></div><span class="affect-value">—</span></div>
+      </div>
+      <div class="panel-note">Vector components in [−1, 1]; bar fills half-width per side of the midline.</div>
+    </section>
+
+    <section class="panel" id="panel-drift">
+      <header class="panel-header">BASELINE DRIFT ‖b − b₀‖</header>
+      <div id="drift-value" class="big-number">0.00</div>
+      <canvas id="drift-spark" width="240" height="40"></canvas>
+    </section>
+
+    <section class="panel wide" id="panel-valence">
+      <header class="panel-header">VALENCE (signed pleasantness, w<sub>v</sub><sup>T</sup>e)</header>
+      <canvas id="valence-chart" width="640" height="120"></canvas>
+    </section>
+
+    <section class="panel wide" id="panel-arousal">
+      <header class="panel-header">AROUSAL ‖e − b‖</header>
+      <canvas id="arousal-chart" width="640" height="120"></canvas>
+    </section>
+
+    <section class="panel wide" id="panel-bond">
+      <header class="panel-header">BOND W<sub>bond</sub>(p)</header>
+      <canvas id="bond-chart" width="640" height="120"></canvas>
+    </section>
+
+    <section class="panel tall" id="panel-memory">
+      <header class="panel-header">TOP-K SALIENT MEMORIES</header>
+      <ul id="memory-list"></ul>
+    </section>
+
+    <section class="panel wide tall" id="panel-log">
+      <header class="panel-header">JOURNAL EVENT STREAM</header>
+      <ol id="event-log"></ol>
+    </section>
+  </main>
+</div>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>

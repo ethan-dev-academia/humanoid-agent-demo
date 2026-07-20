@@ -9,6 +9,12 @@
  * Watch for the dim `...` typing indicator; each chunk arrives after a
  * length-proportional pause.
  *
+ * A diagnostic dashboard boots automatically at http://localhost:7373. Open it
+ * in a browser to see the agent's affect vector, valence/arousal/bond
+ * time-series, baseline drift, salient memory graph, and a live stream of
+ * every module's journal events. Read-only; the terminal remains the sole
+ * input.
+ *
  * Usage:
  *   cp .env.example .env    (add your OPENROUTER_API_KEY)
  *   pnpm install
@@ -31,6 +37,7 @@ import { CliAdapter } from '@humanoid/adapter-cli';
 
 import { character } from './character.js';
 import { XENOVA_EMBEDDING_DIM, createOpenRouterChat, createXenovaEmbed } from './providers.js';
+import { createVizServer } from './viz/server.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-sonnet';
@@ -54,11 +61,13 @@ async function main(): Promise<void> {
   });
 
   const store = new InMemoryStore();
+  const viz = createVizServer({ characterName: character.name ?? 'agent', underlyingSink: store });
   const agent = new Agent({
     store,
     character,
     embeddingDim: XENOVA_EMBEDDING_DIM,
     models: { generation: { generate, embed } },
+    journalSink: viz.journalSink,
   });
 
   const resolver = new InMemoryIdentityResolver();
@@ -66,6 +75,7 @@ async function main(): Promise<void> {
 
   // Track active persons so the periodic tick has someone to fire on.
   const activePersons = new Set<PersonId>();
+  viz.attach(agent, activePersons);
 
   // Background loop scheduler — Algorithm 2 (consolidation, belief revision,
   // plasticity, anticipation, rumination, outreach) fires every N ms for each
@@ -85,6 +95,11 @@ async function main(): Promise<void> {
 
   const shutdown = async (): Promise<void> => {
     clearInterval(tickTimer);
+    try {
+      await viz.stop();
+    } catch (err) {
+      console.error('[viz stop error]', err);
+    }
     await cli.stop();
   };
 
@@ -155,6 +170,7 @@ async function main(): Promise<void> {
 
   console.error(
     [
+      `[dashboard: ${viz.url} — open in a browser for live diagnostics]`,
       `[chat started with model ${OPENROUTER_MODEL}]`,
       `[background loop fires every ${TICK_INTERVAL_MS}ms; use /snapshot to inspect]`,
       '[type /help for commands, /quit to exit]',
