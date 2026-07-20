@@ -133,6 +133,8 @@ This is the substrate for downstream analysis: plot per-turn valence/arousal/bon
 
 Ctrl-C at any time cleanly writes the record with whatever turns completed.
 
+**Watch the journal for safety events.** The SDK guards the affect / retrieval / plasticity path against numerical corruption (see humanoid-sdk `NumericSafety`). Four warning events show up in the dashboard's Journal tab if any guard fires — `normalize-fallback`, `recall-affect-clamped`, `reject-affect`, `mood-frozen`. On a healthy run these should be rare; a sudden burst of any of them (especially `normalize-fallback` clustered around one turn) is a strong signal something in the persona tuning or retrieval scoring has pushed the pipeline into a corner. Long batches produced silently-degenerate transcripts in earlier versions (both agents collapsing to bare "yeah" for hundreds of turns while internal state was frozen) — the guards fire before that happens now.
+
 ## What to watch for in a long conversation
 
 Because the background loop is auto-firing:
