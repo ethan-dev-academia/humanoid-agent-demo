@@ -6,6 +6,7 @@
   "description": "Long-horizon CLI chat surface for humanoid-sdk. OpenRouter for generation; local Xenova/transformers for embeddings; in-memory ground store. A relationship-testing bench, not a production deploy.",
   "scripts": {
     "chat": "tsx src/index.ts",
+    "sim": "tsx src/simulate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

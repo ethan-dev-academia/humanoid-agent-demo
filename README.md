@@ -63,6 +63,76 @@ The dashboard uses a `TeeJournalSink` under the hood — every event still lands
 
 No installation step for the dashboard — it's static HTML served by the demo process, no CDN, works offline.
 
+## Agent-to-agent simulation
+
+Two Agents can also talk to each other, so you can watch cross-agent drift, mutual influence, and convergence/divergence dynamics as they unfold. This is the primary use case for validating the paper's long-horizon claims — a human on the other end is variable and slow; two agents can run for 30–45 minutes uninterrupted and produce a machine-readable run record for analysis.
+
+A full batch is tuned for **long-horizon change**: default is up to 500 turns or 40 minutes of wall-clock, whichever ends first. Plasticity (§12 Eq. 18), consolidation, belief-revision, and rumination all live on the background tick — the sim fires Algorithm 2 for both agents every 60 seconds during the run so the cognition tier is actually working, not just the live path. Short runs (~5 min) show live-path affect wobble but almost no baseline drift; a full 40-min batch is where the setpoint actually moves.
+
+```bash
+pnpm sim
+```
+
+Boots **two** agents with contrasting personas:
+
+- **Aria** — warm, dry, trusting-lean baseline (from `src/character.ts`).
+- **Milo** — melancholic, anxious, cool-trust counterpart (from `src/character-milo.ts`). Baseline mood is roughly the shadow of Aria's; sadness and fear have long half-lives so bad turns leave a residue.
+
+Each agent gets its own diagnostic dashboard on its own port:
+
+- Aria's dashboard: **http://localhost:7373**
+- Milo's dashboard: **http://localhost:7374**
+
+Open both in a browser side-by-side. Watch:
+
+- **The transcript panel** — same conversation appears in both dashboards, but each shows it from that agent's POV (own messages tagged `self`, counterpart's tagged `other`).
+- **Cross-agent affect drift** — does Aria's warmth pull Milo up? Does Milo's melancholy pull Aria down? The valence / arousal / bond time-series in each dashboard tell the story.
+- **Bond asymmetry** — one agent's bond may grow while the other's shrinks. This is common when temperaments diverge.
+- **Baseline drift** — after many turns, the drifted temperament `b` moves; a persistent negative peer can shift the setpoint.
+- **Rumination** — Milo is tuned for long-half-life sadness and higher compartmentalization leak; expect his mood to hold negative residue across turns even when Aria is trying to lift.
+
+### Configuration
+
+All optional; env vars in `.env` or your shell:
+
+- `SIM_TURNS` — hard cap on turn count. Default `500`. Combined with the duration cap; whichever trips first ends the batch.
+- `SIM_DURATION_MS` — hard cap on wall-clock in milliseconds. Default `2400000` (40 minutes). Set to `1800000` for 30 min, `3600000` for a full hour. This is the primary knob for how long a batch runs — at ~5–8s per turn including delay, a 40-minute batch typically produces 250–350 completed turns.
+- `SIM_TURN_DELAY_MS` — pause between turns in milliseconds. Default `2000`. Two agents at ~1 LLM call each per turn is ~2 requests/turn; the delay is a courtesy to OpenRouter rate limits and gives the tick timer + dashboards room to breathe.
+- `SIM_TICK_INTERVAL_MS` — how often the background loop (Algorithm 2 — consolidation, plasticity, rumination, outreach) fires for BOTH agents during the run. Default `60000` (60s). Long-horizon change comes from the tick, not the turn — do not turn this off if you actually want to see baseline drift.
+- `SIM_SEED` — Aria's opening utterance. Default `"hey — how are you doing?"`. Use something loaded ("i had a rough day") to see how quickly a persona colors the whole conversation.
+
+Every 10 turns the sim prints a progress line to stderr with elapsed time, projected end, and each agent's current baseline drift + bond, so you can eyeball how the batch is moving without opening the dashboards.
+
+### Run records
+
+Every sim dumps a JSON file to `sim-runs/<ISO-timestamp>.json` (gitignored). Structure:
+
+```json
+{
+  "runId": "2026-07-20T18-23-01-234Z",
+  "startedAt": 1737392581234,
+  "endedAt":   1737392621890,
+  "config": { "turnsRequested": 20, "turnsActual": 20, "turnDelayMs": 2000, "seed": "...", "model": "...", "aria": {...}, "milo": {...} },
+  "transcript": [
+    { "turn": 1, "speaker": "aria", "listener": "milo", "text": "...", "messageChunks": ["..."], "timestamp": 1737..., "isSeed": true },
+    { "turn": 2, "speaker": "milo", "listener": "aria", "text": "...", "messageChunks": ["...", "..."], "timestamp": 1737... },
+    ...
+  ],
+  "snapshots": {
+    "aria": [ { "turn": 2, "snapshot": { ...AgentSnapshot } }, ... ],
+    "milo": [ { "turn": 2, "snapshot": { ...AgentSnapshot } }, ... ]
+  },
+  "journal": {
+    "aria": [ ...every JournalEvent Aria emitted... ],
+    "milo": [ ...every JournalEvent Milo emitted... ]
+  }
+}
+```
+
+This is the substrate for downstream analysis: plot per-turn valence/arousal/bond across the full run, cluster journal events by module, compare snapshot trajectories under different seeds or personas.
+
+Ctrl-C at any time cleanly writes the record with whatever turns completed.
+
 ## What to watch for in a long conversation
 
 Because the background loop is auto-firing:

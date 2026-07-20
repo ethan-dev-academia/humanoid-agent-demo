@@ -6,7 +6,9 @@
  * `InMemoryStore`, so nothing is lost) and simultaneously broadcasts to all
  * connected WS clients. Every `pollIntervalMs` snapshots each active person
  * via `agent.snapshot(personId)` and broadcasts. Serves a static single-page
- * dashboard from `./public/`.
+ * dashboard from `./public/`. Also exposes a public `broadcast(msg)` escape
+ * hatch so external callers can push arbitrary JSON-serializable messages
+ * (e.g. the agent-to-agent simulator's transcript entries) to all clients.
  */
 
 import { createServer, type Server as HttpServer } from 'node:http';
@@ -43,10 +45,22 @@ export interface VizServerHandle {
    * the Agent is needed to service snapshot polling).
    */
   attach(agent: Agent, activePersons: ReadonlySet<PersonId>): void;
+  /**
+   * Broadcast an arbitrary message to every connected client. Wraps
+   * `JSON.stringify` in try/catch — unserializable messages are dropped with
+   * a `[viz: dropping unserializable message]` warning to stderr. Intended
+   * escape hatch for feature-specific messages the server does not know
+   * about (e.g. simulator transcript entries).
+   */
+  broadcast(msg: unknown): void;
   stop(): Promise<void>;
 }
 
-/** Outbound wire protocol. Frozen — dashboard clients depend on the exact shape. */
+/**
+ * Known outbound frames. The wire is not closed — external callers may push
+ * arbitrary shapes via `broadcast(msg)`; dashboard clients ignore unknown
+ * `kind`s. These are the shapes the server itself emits.
+ */
 type VizOutbound =
   | { kind: 'hello'; character: string; port: number }
   | { kind: 'snapshot'; personId: string; timestamp: number; snapshot: AgentSnapshot }
@@ -62,70 +76,6 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
 };
 
 /**
- * Broadcast-only sink: holds the WS client set and pushes every event as a
- * JSON `journal` frame. Never persists — pair it with a real sink via
- * `TeeJournalSink` so events aren't lost.
- */
-class BroadcastJournalSink implements JournalSink {
-  constructor(private readonly clients: Set<WebSocket>) {}
-
-  record(event: JournalEvent): void {
-    broadcast(this.clients, { kind: 'journal', event });
-  }
-
-  recordBatch(events: readonly JournalEvent[]): void {
-    for (const e of events) broadcast(this.clients, { kind: 'journal', event: e });
-  }
-}
-
-/**
- * Fan-out sink: forwards to an underlying sink (durability) and to a broadcast
- * sink (dashboard). Underlying is awaited first so persistence errors surface
- * before we tell the UI anything happened.
- */
-class TeeJournalSink implements JournalSink {
-  constructor(
-    private readonly underlying: JournalSink,
-    private readonly broadcaster: BroadcastJournalSink,
-  ) {}
-
-  async record(event: JournalEvent): Promise<void> {
-    await this.underlying.record(event);
-    this.broadcaster.record(event);
-  }
-
-  async recordBatch(events: readonly JournalEvent[]): Promise<void> {
-    if (this.underlying.recordBatch) {
-      await this.underlying.recordBatch(events);
-    } else {
-      for (const e of events) await this.underlying.record(e);
-    }
-    this.broadcaster.recordBatch(events);
-  }
-}
-
-/** Best-effort JSON send; drops the socket from the set on any failure. */
-function broadcast(clients: Set<WebSocket>, message: VizOutbound): void {
-  let json: string;
-  try {
-    json = JSON.stringify(message);
-  } catch (err) {
-    // Payloads may contain non-serializable values (functions, class instances);
-    // skip them rather than crash the loop.
-    console.error('[viz: dropping unserializable event]', err);
-    return;
-  }
-  for (const ws of clients) {
-    if (ws.readyState !== WebSocket.OPEN) continue;
-    try {
-      ws.send(json);
-    } catch {
-      clients.delete(ws);
-    }
-  }
-}
-
-/**
  * Boot the diagnostic dashboard: HTTP static server + WS broadcaster + snapshot
  * polling loop. Returns a handle whose `journalSink` must be passed into the
  * Agent, and whose `attach` must be called once the Agent exists.
@@ -134,8 +84,54 @@ export function createVizServer(opts: VizServerOptions): VizServerHandle {
   const port = opts.port ?? DEFAULT_PORT;
   const pollIntervalMs = opts.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const clients = new Set<WebSocket>();
-  const broadcaster = new BroadcastJournalSink(clients);
-  const journalSink = new TeeJournalSink(opts.underlyingSink, broadcaster);
+
+  // Single fan-out path for every outbound frame (journal, snapshot, and any
+  // external `broadcast(msg)` call). Drops sockets on send failure and skips
+  // unserializable payloads rather than crashing the caller.
+  function broadcast(msg: unknown): void {
+    let json: string;
+    try {
+      json = JSON.stringify(msg);
+    } catch (err) {
+      console.error('[viz: dropping unserializable message]', err);
+      return;
+    }
+    for (const ws of clients) {
+      if (ws.readyState !== WebSocket.OPEN) continue;
+      try {
+        ws.send(json);
+      } catch {
+        clients.delete(ws);
+      }
+    }
+  }
+
+  // Broadcast-only journal sink; paired with the underlying sink via the tee
+  // below so events are persisted before the UI is told about them.
+  const broadcasterSink: JournalSink = {
+    record(event: JournalEvent) {
+      broadcast({ kind: 'journal', event } satisfies VizOutbound);
+    },
+    recordBatch(events: readonly JournalEvent[]) {
+      for (const e of events) broadcast({ kind: 'journal', event: e } satisfies VizOutbound);
+    },
+  };
+
+  const underlying = opts.underlyingSink;
+  const journalSink: JournalSink = {
+    async record(event: JournalEvent) {
+      await underlying.record(event);
+      broadcasterSink.record!(event);
+    },
+    async recordBatch(events: readonly JournalEvent[]) {
+      if (underlying.recordBatch) {
+        await underlying.recordBatch(events);
+      } else {
+        for (const e of events) await underlying.record(e);
+      }
+      broadcasterSink.recordBatch!(events);
+    },
+  };
 
   let attachedAgent: Agent | undefined;
   let attachedPersons: ReadonlySet<PersonId> | undefined;
@@ -179,7 +175,8 @@ export function createVizServer(opts: VizServerOptions): VizServerHandle {
     ws.on('close', () => clients.delete(ws));
     ws.on('error', () => clients.delete(ws));
 
-    // Hello frame: identifies the character and confirms the port the client hit.
+    // Hello frame stays inline: single-socket target (the just-opened one),
+    // not a fan-out — no reason to route through the shared broadcast path.
     try {
       ws.send(JSON.stringify({ kind: 'hello', character: opts.characterName, port } satisfies VizOutbound));
     } catch {
@@ -214,12 +211,12 @@ export function createVizServer(opts: VizServerOptions): VizServerHandle {
     for (const personId of attachedPersons) {
       try {
         const snapshot = await attachedAgent.snapshot(personId);
-        broadcast(clients, {
+        broadcast({
           kind: 'snapshot',
           personId,
           timestamp: Date.now(),
           snapshot,
-        });
+        } satisfies VizOutbound);
       } catch (err) {
         console.error('[viz: snapshot poll failed]', personId, err);
       }
@@ -236,6 +233,7 @@ export function createVizServer(opts: VizServerOptions): VizServerHandle {
       attachedAgent = agent;
       attachedPersons = activePersons;
     },
+    broadcast,
     async stop() {
       clearInterval(pollTimer);
       for (const ws of clients) {

@@ -19,6 +19,7 @@ const state = {
   bondSeries: new Map(),
   driftSeries: new Map(),
   events: [],
+  transcript: [],
 };
 
 const els = {
@@ -106,7 +107,36 @@ function dispatch(msg) {
     case 'hello': return onHello(msg);
     case 'snapshot': return onSnapshot(msg);
     case 'journal': return onJournal(msg);
+    case 'transcript': return handleTranscript(msg);
   }
+}
+
+function handleTranscript(msg) {
+  state.transcript.push({ timestamp: msg.timestamp, speaker: msg.speaker, text: msg.text });
+  if (state.transcript.length > 100) state.transcript.shift();
+  renderTranscriptEntry(msg);
+  updateTranscriptCount();
+}
+
+function renderTranscriptEntry({ timestamp, speaker, text }) {
+  const list = document.getElementById('transcript-list');
+  if (!list) return;
+  const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 10;
+  const li = document.createElement('li');
+  li.className = 'transcript-row';
+  li.dataset.speaker = speaker;
+  li.innerHTML =
+    `<span class="transcript-speaker">${speaker === 'self' ? 'self' : 'other'}</span>` +
+    `<span class="transcript-text">${escapeHtml(text)}</span>` +
+    `<span class="transcript-time">${formatTime(timestamp)}</span>`;
+  list.appendChild(li);
+  while (list.children.length > 100) list.removeChild(list.firstElementChild);
+  if (atBottom) list.scrollTop = list.scrollHeight;
+}
+
+function updateTranscriptCount() {
+  const el = document.getElementById('transcript-count');
+  if (el) el.textContent = `${state.transcript.length} msgs`;
 }
 
 function onHello(msg) {
