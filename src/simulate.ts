@@ -38,6 +38,7 @@ import { character as ariaCharacter } from './character.js';
 import { character as miloCharacter } from './character-milo.js';
 import { XENOVA_EMBEDDING_DIM, createOpenRouterChat, createXenovaEmbed } from './providers.js';
 import { createVizServer, type VizServerHandle } from './viz/server.js';
+import { worldContext } from './world-context.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? 'anthropic/claude-sonnet-4.6';
@@ -131,6 +132,7 @@ async function bootAgentWithEmbed(
     embeddingDim: XENOVA_EMBEDDING_DIM,
     models: { generation: { generate, embed } },
     journalSink: captured,
+    worldContext,
   });
   return { name, port, store, viz, captured, agent };
 }

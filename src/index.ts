@@ -38,6 +38,7 @@ import { CliAdapter } from '@humanoid/adapter-cli';
 import { character } from './character.js';
 import { XENOVA_EMBEDDING_DIM, createOpenRouterChat, createXenovaEmbed } from './providers.js';
 import { createVizServer } from './viz/server.js';
+import { worldContext } from './world-context.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-sonnet';
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
     embeddingDim: XENOVA_EMBEDDING_DIM,
     models: { generation: { generate, embed } },
     journalSink: viz.journalSink,
+    worldContext,
   });
 
   const resolver = new InMemoryIdentityResolver();
