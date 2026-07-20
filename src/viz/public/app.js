@@ -37,7 +37,44 @@ const els = {
   bondChart: document.getElementById('bond-chart'),
   memoryList: document.getElementById('memory-list'),
   eventLog: document.getElementById('event-log'),
+  memoryBadge: document.getElementById('memory-badge'),
+  eventBadge: document.getElementById('event-badge'),
 };
+
+// --- Tab switching ------------------------------------------------------------
+// Fixed 16:9 viewport: only one tabpanel is visible at a time. Tabs are
+// clickable and keyboard-addressable (1–4). All DOM elements stay mounted so
+// the render helpers can keep writing to hidden panels without special-casing.
+
+const tabOrder = ['affect', 'memory', 'transcript', 'journal'];
+
+function activateTab(name) {
+  if (!tabOrder.includes(name)) return;
+  document.querySelectorAll('.tab').forEach((el) => {
+    const on = el.dataset.tab === name;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('.tabpanel').forEach((el) => {
+    const on = el.dataset.tab === name;
+    el.classList.toggle('active', on);
+    if (on) el.removeAttribute('hidden'); else el.setAttribute('hidden', '');
+  });
+  // Re-render charts on activation so the canvas picks up the newly-visible
+  // layout size (canvases inside display:none don't compute layout).
+  if (name === 'affect') redrawAffectCharts();
+}
+
+function initTabs() {
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+    const idx = Number.parseInt(e.key, 10);
+    if (idx >= 1 && idx <= tabOrder.length) activateTab(tabOrder[idx - 1]);
+  });
+}
 
 let cssVars = null;
 function palette() {
@@ -115,7 +152,7 @@ function handleTranscript(msg) {
   state.transcript.push({ timestamp: msg.timestamp, speaker: msg.speaker, text: msg.text });
   if (state.transcript.length > 100) state.transcript.shift();
   renderTranscriptEntry(msg);
-  updateTranscriptCount();
+  updateBadge('transcript-count', state.transcript.length);
 }
 
 function renderTranscriptEntry({ timestamp, speaker, text }) {
@@ -134,9 +171,9 @@ function renderTranscriptEntry({ timestamp, speaker, text }) {
   if (atBottom) list.scrollTop = list.scrollHeight;
 }
 
-function updateTranscriptCount() {
-  const el = document.getElementById('transcript-count');
-  if (el) el.textContent = `${state.transcript.length} msgs`;
+function updateBadge(id, count) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = String(count);
 }
 
 function onHello(msg) {
@@ -163,11 +200,23 @@ function onSnapshot({ personId, timestamp, snapshot }) {
     renderMoodBrief(snap);
     renderAffectBars(snap);
     renderDrift(snap, active);
-    renderTimeSeriesChart(els.valenceChart, state.valenceSeries.get(active) || [], { axis: 'signed' });
-    renderTimeSeriesChart(els.arousalChart, state.arousalSeries.get(active) || [], { axis: 'positive' });
-    renderTimeSeriesChart(els.bondChart, state.bondSeries.get(active) || [], { axis: 'signed' });
+    redrawAffectCharts();
     renderMemoryList(snap);
+    updateBadge('memory-badge', (snap.topMemories || []).length);
   }
+}
+
+// Redraw the three affect-tab time-series charts. Called on every snapshot AND
+// on tab activation (canvases hidden by display:none have zero layout size, so
+// their prior draws show empty until we redraw once the tab is visible).
+function redrawAffectCharts() {
+  const active = state.latestSnapshots.keys().next().value;
+  if (active === undefined) return;
+  renderTimeSeriesChart(els.valenceChart, state.valenceSeries.get(active) || [], { axis: 'signed' });
+  renderTimeSeriesChart(els.arousalChart, state.arousalSeries.get(active) || [], { axis: 'positive' });
+  renderTimeSeriesChart(els.bondChart, state.bondSeries.get(active) || [], { axis: 'signed' });
+  const snap = state.latestSnapshots.get(active);
+  if (snap) renderDrift(snap, active);
 }
 
 function onJournal({ event }) {
@@ -175,6 +224,7 @@ function onJournal({ event }) {
   state.events.push(event);
   if (state.events.length > EVENT_LEN) state.events.splice(0, state.events.length - EVENT_LEN);
   renderEventLog(event);
+  updateBadge('event-badge', state.events.length);
 }
 
 function pushSeries(map, personId, t, v, maxLen) {
@@ -432,4 +482,5 @@ function formatTime(ms) {
   return new Date(ms).toLocaleTimeString('en-US', { hour12: false });
 }
 
+initTabs();
 connect();

@@ -8,75 +8,89 @@
 </head>
 <body>
 <div id="app">
-  <header id="header">
-    <span id="app-title">humanoid</span>
-    <span class="sep">▸</span>
-    <span id="character-name">—</span>
-    <span class="sep">@</span>
-    <span id="active-persons">—</span>
-    <span id="status" data-state="disconnected">disconnected</span>
-  </header>
+  <div id="viewport">
+    <header id="header">
+      <span id="app-title">humanoid</span>
+      <span class="sep">▸</span>
+      <span id="character-name">—</span>
+      <span class="sep">@</span>
+      <span id="active-persons">—</span>
+      <span id="status" data-state="disconnected">disconnected</span>
+    </header>
 
-  <main id="grid">
-    <section class="panel wide-full" id="panel-transcript">
-      <header class="panel-header">
-        <span>TRANSCRIPT</span>
-        <span id="transcript-count" class="panel-header-meta">0 msgs</span>
-      </header>
-      <ol id="transcript-list"></ol>
-    </section>
+    <nav id="tabs" role="tablist" aria-label="dashboard tabs">
+      <button class="tab active" role="tab" data-tab="affect" aria-selected="true"><span class="tab-num">1</span>Affect</button>
+      <button class="tab" role="tab" data-tab="memory" aria-selected="false"><span class="tab-num">2</span>Memory<span class="tab-badge" id="memory-badge">0</span></button>
+      <button class="tab" role="tab" data-tab="transcript" aria-selected="false"><span class="tab-num">3</span>Transcript<span class="tab-badge" id="transcript-count">0</span></button>
+      <button class="tab" role="tab" data-tab="journal" aria-selected="false"><span class="tab-num">4</span>Journal<span class="tab-badge" id="event-badge">0</span></button>
+    </nav>
 
-    <section class="panel" id="panel-mood">
-      <header class="panel-header">MOOD BRIEF</header>
-      <div id="mood-brief" class="mood-pill">—</div>
-      <div id="mood-timestamp" class="timestamp">—</div>
-    </section>
+    <main id="tabpanels">
+      <section class="tabpanel active" role="tabpanel" data-tab="affect">
+        <div class="affect-top">
+          <div class="affect-block">
+            <span class="mini-label">MOOD BRIEF</span>
+            <div id="mood-brief" class="mood-pill">—</div>
+            <div id="mood-timestamp" class="timestamp">—</div>
+          </div>
+          <div class="affect-block">
+            <span class="mini-label">BASELINE DRIFT ‖b − b₀‖</span>
+            <div id="drift-value" class="big-number">0.000</div>
+            <canvas id="drift-spark" width="360" height="40"></canvas>
+          </div>
+        </div>
 
-    <section class="panel" id="panel-affect">
-      <header class="panel-header">BASELINE TEMPERAMENT (drifted)</header>
-      <div id="affect-bars">
-        <div class="affect-row" data-emotion="joy"><span class="affect-label">joy</span><div class="affect-bar"><div class="affect-fill affect-fill-pos"></div></div><span class="affect-value">—</span></div>
-        <div class="affect-row" data-emotion="sadness"><span class="affect-label">sadness</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
-        <div class="affect-row" data-emotion="anger"><span class="affect-label">anger</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
-        <div class="affect-row" data-emotion="fear"><span class="affect-label">fear</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
-        <div class="affect-row" data-emotion="surprise"><span class="affect-label">surprise</span><div class="affect-bar"><div class="affect-fill affect-fill-neutral"></div></div><span class="affect-value">—</span></div>
-        <div class="affect-row" data-emotion="disgust"><span class="affect-label">disgust</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
-        <div class="affect-row" data-emotion="trust"><span class="affect-label">trust</span><div class="affect-bar"><div class="affect-fill affect-fill-pos"></div></div><span class="affect-value">—</span></div>
-      </div>
-      <div class="panel-note">Vector components in [−1, 1]; bar fills half-width per side of the midline.</div>
-    </section>
+        <div class="affect-mid">
+          <div class="affect-col-bars">
+            <span class="mini-label">BASELINE TEMPERAMENT (drifted)</span>
+            <div id="affect-bars">
+              <div class="affect-row" data-emotion="joy"><span class="affect-label">joy</span><div class="affect-bar"><div class="affect-fill affect-fill-pos"></div></div><span class="affect-value">—</span></div>
+              <div class="affect-row" data-emotion="sadness"><span class="affect-label">sadness</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+              <div class="affect-row" data-emotion="anger"><span class="affect-label">anger</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+              <div class="affect-row" data-emotion="fear"><span class="affect-label">fear</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+              <div class="affect-row" data-emotion="surprise"><span class="affect-label">surprise</span><div class="affect-bar"><div class="affect-fill affect-fill-neutral"></div></div><span class="affect-value">—</span></div>
+              <div class="affect-row" data-emotion="disgust"><span class="affect-label">disgust</span><div class="affect-bar"><div class="affect-fill affect-fill-neg"></div></div><span class="affect-value">—</span></div>
+              <div class="affect-row" data-emotion="trust"><span class="affect-label">trust</span><div class="affect-bar"><div class="affect-fill affect-fill-pos"></div></div><span class="affect-value">—</span></div>
+            </div>
+          </div>
 
-    <section class="panel" id="panel-drift">
-      <header class="panel-header">BASELINE DRIFT ‖b − b₀‖</header>
-      <div id="drift-value" class="big-number">0.00</div>
-      <canvas id="drift-spark" width="240" height="40"></canvas>
-    </section>
+          <div class="affect-col-charts">
+            <div class="mini-chart">
+              <span class="mini-label">VALENCE w<sub>v</sub><sup>T</sup>e</span>
+              <canvas id="valence-chart" width="640" height="72"></canvas>
+            </div>
+            <div class="mini-chart">
+              <span class="mini-label">AROUSAL ‖e − b‖</span>
+              <canvas id="arousal-chart" width="640" height="72"></canvas>
+            </div>
+            <div class="mini-chart">
+              <span class="mini-label">BOND W<sub>bond</sub>(p)</span>
+              <canvas id="bond-chart" width="640" height="72"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section class="panel wide" id="panel-valence">
-      <header class="panel-header">VALENCE (signed pleasantness, w<sub>v</sub><sup>T</sup>e)</header>
-      <canvas id="valence-chart" width="640" height="120"></canvas>
-    </section>
+      <section class="tabpanel" role="tabpanel" data-tab="memory" hidden>
+        <div class="section-hint">Top-k salient episodes for this relationship, sorted by salience. Colored by categorical affect tag.</div>
+        <ul id="memory-list"></ul>
+      </section>
 
-    <section class="panel wide" id="panel-arousal">
-      <header class="panel-header">AROUSAL ‖e − b‖</header>
-      <canvas id="arousal-chart" width="640" height="120"></canvas>
-    </section>
+      <section class="tabpanel" role="tabpanel" data-tab="transcript" hidden>
+        <div class="section-hint">Conversation from this agent's POV — <span class="hint-self">self</span> = its own messages, <span class="hint-other">other</span> = counterpart.</div>
+        <ol id="transcript-list"></ol>
+      </section>
 
-    <section class="panel wide" id="panel-bond">
-      <header class="panel-header">BOND W<sub>bond</sub>(p)</header>
-      <canvas id="bond-chart" width="640" height="120"></canvas>
-    </section>
+      <section class="tabpanel" role="tabpanel" data-tab="journal" hidden>
+        <div class="section-hint">Every module's <code>emit()</code> in real time. Auto-scrolls when at the bottom; scroll up to pause.</div>
+        <ol id="event-log"></ol>
+      </section>
+    </main>
 
-    <section class="panel tall" id="panel-memory">
-      <header class="panel-header">TOP-K SALIENT MEMORIES</header>
-      <ul id="memory-list"></ul>
-    </section>
-
-    <section class="panel wide tall" id="panel-log">
-      <header class="panel-header">JOURNAL EVENT STREAM</header>
-      <ol id="event-log"></ol>
-    </section>
-  </main>
+    <footer id="footer">
+      <span class="footer-hint">click a tab or press <kbd>1</kbd>–<kbd>4</kbd></span>
+    </footer>
+  </div>
 </div>
 
 <script src="/app.js" type="module"></script>
