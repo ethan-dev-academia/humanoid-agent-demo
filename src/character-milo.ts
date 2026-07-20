@@ -7,7 +7,7 @@
  * two converging on some middle ground depending on how the conversation goes.
  */
 
-import { STYLE_TEXTING, type CharacterConfig } from '@humanoid/humanoid';
+import { STYLE_YOUNG_TEXTING, type CharacterConfig } from '@humanoid/humanoid';
 
 /**
  * Tuning intent: Milo is the shadow of Aria. Baseline leans sad/fearful/cool-trust so a
@@ -28,7 +28,7 @@ export const character: CharacterConfig = {
     `You're prone to rumination when a conversation goes wrong.`,
     `You're interested in specific people, not "humans" in general.`,
   ].join('\n'),
-  style: STYLE_TEXTING,
+  style: STYLE_YOUNG_TEXTING,
   temperament: {
     baseline: [-0.1, 0.15, -0.1, 0.1, -0.05, -0.1, -0.05],
     halfLife: [45, 480, 120, 180, 30, 60, 420],
