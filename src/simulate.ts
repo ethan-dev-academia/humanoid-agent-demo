@@ -45,7 +45,7 @@ const SIM_TURNS = Number.parseInt(process.env.SIM_TURNS ?? '500', 10);
 const SIM_DURATION_MS = Number.parseInt(process.env.SIM_DURATION_MS ?? '2400000', 10);
 const SIM_TURN_DELAY_MS = Number.parseInt(process.env.SIM_TURN_DELAY_MS ?? '2000', 10);
 const SIM_TICK_INTERVAL_MS = Number.parseInt(process.env.SIM_TICK_INTERVAL_MS ?? '60000', 10);
-const SIM_SEED = process.env.SIM_SEED ?? 'hey — how are you doing?';
+const SIM_SEED = process.env.SIM_SEED ?? 'yo who u got as the best driver on the grid rn';
 
 if (!OPENROUTER_API_KEY) {
   console.error('OPENROUTER_API_KEY is missing.');
